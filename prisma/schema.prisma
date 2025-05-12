@@ -1,0 +1,314 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+generator erd {
+  provider = "prisma-erd-generator"
+  output   = "./diagram1.png" //
+  format   = "png"
+}
+
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  STAFF
+  STUDENT
+}
+
+enum ProgramStatus {
+  UPCOMING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum EnrollmentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+  WITHDRAWN
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified DateTime?
+  password      String?
+  phone         String?
+  image         String?
+  role          UserRole  @default(STUDENT)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  enrollments   Enrollment[]
+  documents     Document[]
+  sessions      Session[]
+  programs      Program[]    @relation("ProgramCreator")
+  attendances         Attendance[]
+  submissions         Submission[]
+  comments            Comment[]
+  announcementComments AnnouncementComment[]
+  sentMessages        Message[]        @relation("MessageSender")
+  receivedMessages    Message[]        @relation("MessageReceiver")
+  messageGroups       MessageGroupMember[]
+  createdGroups       MessageGroup[]
+  assignments         Assignment[]     @relation("AssignmentCreator")
+  announcements       Announcement[]   @relation("AnnouncementCreator")
+  chatSessions        ChatSession[]
+}
+
+model Program {
+  id          String        @id @default(cuid())
+  name        String
+  description String
+  duration    Int           // Duration in weeks
+  startDate   DateTime?     // Now optional
+  endDate     DateTime?     // Now optional
+  capacity    Int
+  status      ProgramStatus @default(UPCOMING)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  createdById String?
+
+  // Relations
+  enrollments Enrollment[]
+  createdBy   User?         @relation("ProgramCreator", fields: [createdById], references: [id])
+  attendances    Attendance[]
+  assignments    Assignment[]
+  announcements  Announcement[]
+  messageGroups  MessageGroup[]
+}
+
+model Enrollment {
+  id           String           @id @default(cuid())
+  userId       String
+  programId    String
+  status       EnrollmentStatus @default(PENDING)
+  registeredAt DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  message      String?          // Additional information from student
+
+  // Relations
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  program      Program          @relation(fields: [programId], references: [id], onDelete: Cascade)
+  documents    Document[]
+
+  @@unique([userId, programId])
+}
+
+model Document {
+  id           String    @id @default(cuid())
+  name         String
+  url          String
+  type         String    // File type (e.g., PDF, DOC, JPG)
+  size         Int       // File size in bytes
+  uploadedAt   DateTime  @default(now())
+  userId       String
+  enrollmentId String?
+
+  // Relations
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enrollment   Enrollment? @relation(fields: [enrollmentId], references: [id])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  expires      DateTime
+  sessionToken String   @unique
+  accessToken  String?  @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+enum AssignmentStatus {
+  PENDING
+  SUBMITTED
+  GRADED
+  LATE
+}
+
+model Attendance {
+  id           String           @id @default(cuid())
+  userId       String
+  programId    String
+  date         DateTime
+  status       AttendanceStatus @default(PRESENT)
+  notes        String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  // Relations
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  program      Program          @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, programId, date])
+}
+
+model Assignment {
+  id           String           @id @default(cuid())
+  title        String
+  description  String
+  dueDate      DateTime
+  programId    String
+  createdById  String
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  // Relations
+  program      Program          @relation(fields: [programId], references: [id], onDelete: Cascade)
+  createdBy    User             @relation("AssignmentCreator", fields: [createdById], references: [id])
+  submissions  Submission[]
+  comments     Comment[]
+}
+
+model Submission {
+  id           String           @id @default(cuid())
+  assignmentId String
+  userId       String
+  content      String
+  fileUrl      String?
+  status       AssignmentStatus @default(PENDING)
+  grade        Int?
+  feedback     String?
+  submittedAt  DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  // Relations
+  assignment   Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments     Comment[]
+
+  @@unique([assignmentId, userId])
+}
+
+model Comment {
+  id           String           @id @default(cuid())
+  content      String
+  userId       String
+  assignmentId String?
+  submissionId String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  // Relations
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignment   Assignment?      @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
+  submission   Submission?      @relation(fields: [submissionId], references: [id], onDelete: SetNull)
+}
+
+model Announcement {
+  id           String           @id @default(cuid())
+  title        String
+  content      String
+  programId    String
+  createdById  String
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  // Relations
+  program      Program          @relation(fields: [programId], references: [id], onDelete: Cascade)
+  createdBy    User             @relation("AnnouncementCreator", fields: [createdById], references: [id])
+  comments     AnnouncementComment[]
+}
+
+model AnnouncementComment {
+  id             String           @id @default(cuid())
+  content        String
+  userId         String
+  announcementId String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  // Relations
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  announcement   Announcement     @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+}
+
+model Message {
+  id           String           @id @default(cuid())
+  content      String
+  senderId     String
+  receiverId   String?
+  groupId      String?
+  isRead       Boolean          @default(false)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  // Relations
+  sender       User             @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver     User?            @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: SetNull)
+  group        MessageGroup?    @relation(fields: [groupId], references: [id], onDelete: SetNull)
+}
+
+model MessageGroup {
+  id           String           @id @default(cuid())
+  name         String
+  programId    String?
+  createdById  String
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  // Relations
+  program      Program?         @relation(fields: [programId], references: [id], onDelete: SetNull)
+  createdBy    User             @relation(fields: [createdById], references: [id])
+  messages     Message[]
+  members      MessageGroupMember[]
+}
+
+model MessageGroupMember {
+  id           String           @id @default(cuid())
+  userId       String
+  groupId      String
+  joinedAt     DateTime         @default(now())
+
+  // Relations
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group        MessageGroup     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+}
+
+model ChatSession {
+  id           String           @id @default(cuid())
+  userId       String
+  title        String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  // Relations
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages     ChatMessage[]
+}
+
+model ChatMessage {
+  id           String           @id @default(cuid())
+  sessionId    String
+  content      String
+  isUserMessage Boolean         @default(true)
+  createdAt    DateTime         @default(now())
+
+  // Relations
+  session      ChatSession      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
