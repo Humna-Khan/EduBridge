@@ -9,12 +9,15 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
+  secret: process.env.NEXTAUTH_SECRET || "your-secret-key",
   providers: [
     CredentialsProvider({
+      id: "credentials",
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
+        email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize() {
@@ -30,17 +33,21 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async session({ session }) {
+    async jwt({ token }) {
+      // Always set admin role
+      token.role = "ADMIN"
+      token.id = "admin"
+      return token
+    },
+    async session({ session, token }) {
       // Always set admin role
       if (session.user) {
         session.user.id = "admin"
         session.user.role = "ADMIN"
+        session.user.email = "admin@example.com"
+        session.user.name = "Admin User"
       }
       return session
-    },
-    async jwt({ token }) {
-      token.role = "ADMIN"
-      return token
     },
   },
 }

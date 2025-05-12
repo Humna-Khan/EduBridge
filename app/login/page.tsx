@@ -33,13 +33,15 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      // Always sign in successfully
-      await signIn("credentials", {
+      const result = await signIn("credentials", {
         email: formData.email || "admin@example.com",
         password: formData.password || "password",
         redirect: false,
-        callbackUrl: "/dashboard"
       })
+
+      if (result?.error) {
+        throw new Error(result.error)
+      }
 
       // Show success toast
       toast({
@@ -47,9 +49,8 @@ export default function LoginPage() {
         description: "Redirecting to dashboard...",
       })
 
-      // Redirect to dashboard
-      router.push("/dashboard")
-      router.refresh()
+      // Force redirect to dashboard
+      window.location.href = "/dashboard"
     } catch (error) {
       // This should never happen, but just in case
       toast({
@@ -83,7 +84,7 @@ export default function LoginPage() {
                 <Input
                   id="email"
                   name="email"
-                  type="email"
+                  type="text"
                   placeholder="any@email.com"
                   value={formData.email}
                   onChange={handleChange}
