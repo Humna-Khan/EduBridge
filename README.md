@@ -1,4 +1,4 @@
-# My V0 Project
+# EduBridge
 
 ## Overview
 This project is a web application built using Next.js, React, and Prisma. It is designed to manage programs, assignments, and user interactions.
