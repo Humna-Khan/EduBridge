@@ -1,12 +1,7 @@
-import { PrismaAdapter } from "@next-auth/prisma-adapter"
-import { compare } from "bcryptjs"
 import NextAuth, { type NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 
-import prisma from "@/lib/prisma"
-
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
   pages: {
     signIn: "/login",
     signOut: "/",
@@ -22,12 +17,12 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
-        // Allow any credentials for testing
+      async authorize() {
+        // Always return admin user
         return {
-          id: "test-user-id",
-          email: credentials?.email || "test@example.com",
-          name: "Test User",
+          id: "admin",
+          email: "admin@example.com",
+          name: "Admin User",
           role: "ADMIN",
           image: null,
         }
@@ -35,21 +30,16 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id as string
-        session.user.name = token.name as string
-        session.user.email = token.email as string
-        session.user.role = token.role as string
-        session.user.image = token.picture as string | null
+    async session({ session }) {
+      // Always set admin role
+      if (session.user) {
+        session.user.id = "admin"
+        session.user.role = "ADMIN"
       }
       return session
     },
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id
-        token.role = user.role
-      }
+    async jwt({ token }) {
+      token.role = "ADMIN"
       return token
     },
   },

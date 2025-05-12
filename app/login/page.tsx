@@ -1,25 +1,18 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { signIn } from "next-auth/react"
 import { motion } from "framer-motion"
 import { GraduationCap, Loader2 } from "lucide-react"
-import { z } from "zod"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
-
-const loginSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address" }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
-})
 
 export default function LoginPage() {
   const router = useRouter()
@@ -29,32 +22,21 @@ export default function LoginPage() {
     email: "",
     password: "",
   })
-  const [errors, setErrors] = useState<Record<string, string>>({})
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
-    // Clear error when user types
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: "" }))
-    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsLoading(true)
 
     try {
-      // Validate form data
-      loginSchema.parse(formData)
-
-      // Clear all errors if validation passes
-      setErrors({})
-      setIsLoading(true)
-
-      // Bypass actual authentication and sign in with mock data
-      const result = await signIn("credentials", {
-        email: formData.email,
-        password: formData.password,
+      // Always sign in successfully
+      await signIn("credentials", {
+        email: formData.email || "admin@example.com",
+        password: formData.password || "password",
         redirect: false,
         callbackUrl: "/dashboard"
       })
@@ -69,23 +51,12 @@ export default function LoginPage() {
       router.push("/dashboard")
       router.refresh()
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        // Set validation errors
-        const newErrors: Record<string, string> = {}
-        error.errors.forEach((err) => {
-          if (err.path[0]) {
-            newErrors[err.path[0].toString()] = err.message
-          }
-        })
-        setErrors(newErrors)
-      } else {
-        // Show error toast for other errors
-        toast({
-          title: "Login failed",
-          description: "An error occurred. Please try again.",
-          variant: "destructive",
-        })
-      }
+      // This should never happen, but just in case
+      toast({
+        title: "Login failed",
+        description: "An error occurred. Please try again.",
+        variant: "destructive",
+      })
       setIsLoading(false)
     }
   }
@@ -102,7 +73,7 @@ export default function LoginPage() {
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold text-center">Log in</CardTitle>
             <CardDescription className="text-center">
-              Enter your email and password to access your account
+              Enter any email and password to access the dashboard
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -113,12 +84,10 @@ export default function LoginPage() {
                   id="email"
                   name="email"
                   type="email"
-                  placeholder="name@example.com"
+                  placeholder="any@email.com"
                   value={formData.email}
                   onChange={handleChange}
-                  className={errors.email ? "border-red-500" : ""}
                 />
-                {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -131,12 +100,10 @@ export default function LoginPage() {
                   id="password"
                   name="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="any password"
                   value={formData.password}
                   onChange={handleChange}
-                  className={errors.password ? "border-red-500" : ""}
                 />
-                {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
               </div>
               <Button type="submit" className="w-full bg-mint-500 hover:bg-mint-600 text-white" disabled={isLoading}>
                 {isLoading ? (
