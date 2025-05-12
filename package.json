@@ -7,7 +7,8 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "generate-erd": "prisma generate && prisma-erd-generator"
   },
   "dependencies": {
     "@auth/core": "latest",
