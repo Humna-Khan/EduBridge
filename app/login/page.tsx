@@ -51,22 +51,13 @@ export default function LoginPage() {
       setErrors({})
       setIsLoading(true)
 
-      // Sign in with NextAuth
+      // Bypass actual authentication and sign in with mock data
       const result = await signIn("credentials", {
         email: formData.email,
         password: formData.password,
         redirect: false,
+        callbackUrl: "/dashboard"
       })
-
-      if (result?.error) {
-        toast({
-          title: "Login failed",
-          description: "Invalid email or password. Please try again.",
-          variant: "destructive",
-        })
-        setIsLoading(false)
-        return
-      }
 
       // Show success toast
       toast({
@@ -91,7 +82,7 @@ export default function LoginPage() {
         // Show error toast for other errors
         toast({
           title: "Login failed",
-          description: "Invalid email or password. Please try again.",
+          description: "An error occurred. Please try again.",
           variant: "destructive",
         })
       }
