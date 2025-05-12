@@ -39,7 +39,7 @@ export const authOptions: NextAuthOptions = {
       token.id = "admin"
       return token
     },
-    async session({ session, token }) {
+    async session({ session }) {
       // Always set admin role
       if (session.user) {
         session.user.id = "admin"
@@ -50,6 +50,7 @@ export const authOptions: NextAuthOptions = {
       return session
     },
   },
+  debug: true, // Enable debug mode
 }
 
 const handler = NextAuth(authOptions)
